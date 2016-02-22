@@ -1,0 +1,171 @@
+Package oncotime;
+
+Helpers
+	a = ['a' + 'A'];
+	b = ['b' + 'B'];
+	c = ['c' + 'C'];
+	d = ['d' + 'D'];
+	e = ['e' + 'E'];
+	f = ['f' + 'F'];
+	g = ['g' + 'G'];
+	h = ['h' + 'H'];
+	i = ['i' + 'I'];
+	j = ['j' + 'J'];
+	k = ['k' + 'K'];
+	l = ['l' + 'L'];
+	m = ['m' + 'M'];
+	n = ['n' + 'N'];
+	o = ['o' + 'O'];
+	p = ['p' + 'P'];
+	q = ['q' + 'Q'];
+	r = ['r' + 'R'];
+	s = ['s' + 'S'];
+	t = ['t' + 'T'];
+	u = ['u' + 'U'];
+	v = ['v' + 'V'];
+	w = ['w' + 'W'];
+	x = ['x' + 'X'];
+	y = ['y' + 'Y'];
+	z = ['z' + 'Z'];
+
+	space_key = ' ';
+	period = '.';
+	unary = '-';
+	punc = period | '!' | '?' | ',';
+	letter  = a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r |s | t | u | v | w | x | y | z;
+	cr = 13;
+	lf = 10;
+	tab = 9;
+	not_eol = [[32..127] - [cr + lf]];
+
+	non_zero_digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+	zero = '0';
+	digit = zero | non_zero_digit;
+  	digits = digit+;
+
+  	integer_numeral = '0' | non_zero_digit digits?;
+  	string_helper = letter | digit | space_key | punc;
+	
+	open_multiline = '/*';
+	close_multiline = '*/';
+
+Tokens
+	comma = ',';
+	colon = ':';
+	assign = '=';
+	use_keyword = u s e;
+	group_keyword = g r o u p;
+	script_keyword = s c r i p t;
+	to = 'to';
+	multiline_comment = open_multiline not_eol* close_multiline;
+
+	open_par = '(';
+	close_par = ')';
+
+	open_bracket = '{';
+	close_bracket = '}';
+
+	identifier = letter (digit | letter)*;
+	group_file = letter (digit | letter)* '.grp';
+	
+	space = space_key;
+	blank = (tab);
+	newline   = cr | lf | cr lf;
+	integer_literal = integer_numeral;
+
+/* Filter Tokens */
+
+/* Filter keywords */
+	population = p o p u l a t i o n;
+	period = p e r i o d;
+	events = e v e n t s;
+	is = i s;
+	are = a r e;
+
+/* Population */
+	id = i d;
+	gender = s e x;
+	birthyear = b i r t h y e a r;
+	diagnosis = d i a g n o s i s;
+	postalcode = p o s t a l c o d e;
+	/* Found in reference compiler grammar */
+	male = 'male' | 'm' | 'Male'; 
+	female = 'female' | 'f' | 'Female';
+
+/* Period */
+	years = y e a r s | y e a r;
+	months = m o n t h s;
+	days =  d a y s | d a y;
+	hours = h o u r s | h o u r;
+	start = s t a r t;
+	end = e n d;
+
+/* Other Types */
+/*	patient = p a t i e n t | p a t i e n t s;
+	doctor = d o c t o r | d o c t o r s; 
+	date = d a t e s;
+	sequence = 's e q u e n c e'; */
+
+Ignored Tokens
+	space, blank;
+
+Productions
+	program = script_header use_clauses* groups_definitions* filters*;
+
+	script_header = script_keyword identifier script_params_list multiline_comment;
+	script_params_list = open_par identifier_list? close_par;
+
+
+	use_clauses = use_keyword use_files_list;
+	use_files_list = group_file use_files_tail*;
+	use_files_tail = comma group_file;
+
+	groups_definitions = group_keyword filter_type identifier assign open_bracket identifier_list close_bracket;
+
+	identifier_list = identifier list_tail*;
+	list_tail = comma identifier;
+
+	filters = pop_filter;
+
+	pop_filter = population is pop_fields*;
+	pop_fields = {patientid} id colon number_spec |
+		{gender} gender colon gender_specs |
+		{birthyear} birthyear colon number_spec |
+		{diagnosis} diagnosis colon identifier_list |
+		{postalcode} postalcode colon identifier_list;
+
+	gender_specs = {variable} identifier |
+		{male} male | 
+		{female} female |
+		{both} male female |
+		{both_genders} female male;
+
+
+	number_spec = {variable} identifier number_tail? |
+		{before} before number_tail?|
+		{after} after number_tail? |
+		{range} range number_tail? |
+		{integer} integer_literal number_tail?;
+
+	number_tail = comma number_spec;
+	before = before integer_literal;
+	after = after integer_literal;
+	range = integer_literal range_tail;
+	range_tail = to identifier;
+
+
+	pop_type = {patientid} id |
+		{sex} gender |
+		{birthyear} birthyear |
+		{diagnosis} diagnosis |
+		{postalcode} postalcode;
+
+	period_type = {years} years |
+		{months} months | 
+		{days} days |
+		{hours} hours |
+		{start} start |
+		{end} end;
+
+	filter_type = {population_type} pop_type | {period_type} period_type;
+
