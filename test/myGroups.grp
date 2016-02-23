@@ -1,0 +1,12 @@
+/**
+ * This file defines a set of data that can easily be changed per doctor. 
+ */
+
+group Id myId = {1001, 2000}
+group Id extraId = {400, 500}
+group Id myPatientIds = {100, 200, 300, 500, <extraId>}
+group Sex myGenders = {M, F}
+group Birthyear myBirthyears = {1993, 2014, 1960}
+group Diagnosis myDiagnosis = {breast, prostate, liver}
+group Days myWorkDays = {Mon, Tues, Wed, Thurs, Fri}
+group Years my_years = {2014, 2015, 2016}

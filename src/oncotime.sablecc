@@ -29,22 +29,31 @@ Helpers
 	z = ['z' + 'Z'];
 
 	space_key = ' ';
-	period = '.';
-	unary = '-';
-	punc = period | '!' | '?' | ',';
-	letter  = a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r |s | t | u | v | w | x | y | z;
+	punc = '.' | '!' | '?' | '_' ;
+	left_angle = '<';
+	right_angle = '>';
+	lower_letter  = ['a'..'z'];
+	upper_letter = ['A'..'Z'];
+	upper_or_lower = upper_letter | lower_letter;
+	letter = lower_letter | upper_letter | punc;
 	cr = 13;
 	lf = 10;
 	tab = 9;
-	not_eol = [[32..127] - [cr + lf]];
+	eol = cr | lf;
+	whitespace = 13 | 10 | 9 | ' ';
+	not_eol = [[0..0xff] - [cr + lf]];
+	all = [0..0xff];
+	comment_text = [all - ['*' + '/']];
+	letter_or_whitespace = letter | whitespace;
 
-	non_zero_digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+	non_zero_digit = ['1'..'9'];
 	zero = '0';
 	digit = zero | non_zero_digit;
   	digits = digit+;
 
-  	integer_numeral = '0' | non_zero_digit digits?;
-  	string_helper = letter | digit | space_key | punc;
+  	/* Found in reference compiler grammar */
+  	male = 'male' | 'm' | 'Male' | 'M' ; 
+  	female = 'female' | 'f' | 'Female' | 'F';
 	
 	open_multiline = '/*';
 	close_multiline = '*/';
@@ -57,28 +66,50 @@ Tokens
 	group_keyword = g r o u p;
 	script_keyword = s c r i p t;
 	to = 'to';
-	multiline_comment = open_multiline not_eol* close_multiline;
+	multiline_comment = open_multiline ('*' comment_text* eol?)* close_multiline;
+	comment = '//'  not_eol*  eol;
 
-	open_par = '(';
-	close_par = ')';
+	open_paren = '(';
+	close_paren = ')';
 
 	open_bracket = '{';
 	close_bracket = '}';
 
-	identifier = letter (digit | letter)*;
-	group_file = letter (digit | letter)* '.grp';
-	
-	space = space_key;
-	blank = (tab);
-	newline   = cr | lf | cr lf;
-	integer_literal = integer_numeral;
+	star = '*';
+	dot = '.';
+
+	//Computation keywords
+	t_print = p r i n t;
+	t_table = t a b l e;
+	t_count = c o u n t;
+	by = b y;
+	t_foreach = f o r e a c h;
+	t_not = n o t;
+	in = i n;
+	t_list = l i s t;
+	t_sequences = s e q u e n c e s?;
+	t_member = m e m b e r;
+	arrow = '->';
+	bar = '|';
+	open_square = '[';
+	close_square = ']';
+	t_timeline = t i m e l i n e;
+	of = o f;
+	t_barchart = b a r c h a r t;
+	t_length = '.' l e n g t h;
+	t_element = e l e m e n t;
+	t_native = n a t i v e;
+	t_like = l i k e;
+
 
 /* Filter Tokens */
 
 /* Filter keywords */
+    event_filter_header = (e v e n t s whitespace+ a r e) | (e v e n t whitespace+ i s);
 	population = p o p u l a t i o n;
 	period = p e r i o d;
-	events = e v e n t s;
+	event = e v e n t s?;
+	doctor = d o c t o r s?;
 	is = i s;
 	are = a r e;
 
@@ -88,84 +119,137 @@ Tokens
 	birthyear = b i r t h y e a r;
 	diagnosis = d i a g n o s i s;
 	postalcode = p o s t a l c o d e;
-	/* Found in reference compiler grammar */
-	male = 'male' | 'm' | 'Male'; 
-	female = 'female' | 'f' | 'Female';
+	either_gender = male | female;
 
 /* Period */
-	years = y e a r s | y e a r;
+	years = y e a r s?;
 	months = m o n t h s;
-	days =  d a y s | d a y;
-	hours = h o u r s | h o u r;
+	days =  d a y s?;
+	hours = h o u r s?;
 	start = s t a r t;
 	end = e n d;
 
 /* Other Types */
-/*	patient = p a t i e n t | p a t i e n t s;
-	doctor = d o c t o r | d o c t o r s; 
+	patient = p a t i e n t s?;
 	date = d a t e s;
-	sequence = 's e q u e n c e'; */
+
+
+	t_postalcode = upper_or_lower digit upper_or_lower digit upper_or_lower digit | 
+	  				upper_or_lower digit upper_or_lower;
+	identifier_expansion = '<' whitespace* (upper_or_lower (digit | letter)*) whitespace* '>';
+	group_file = upper_or_lower (digit | letter)* '.grp';
+	identifier = upper_or_lower (letter | digit)*;
+	quoted_string = '"' letter_or_whitespace+ '"';
+	
+	space = space_key;
+	blank = (tab);
+	eol = eol;
+	newline   = cr | lf | cr lf;
+	integer_literal = digits;
 
 Ignored Tokens
-	space, blank;
+	space, blank, comment, eol;
 
 Productions
-	program = script_header use_clauses* groups_definitions* filters*;
+	program = {script} script_header use_clauses* groups_definitions* filters* open_bracket computation* close_bracket| 
+	          {group_file} multiline_comment groups_definitions*;
 
 	script_header = script_keyword identifier script_params_list multiline_comment;
-	script_params_list = open_par identifier_list? close_par;
+	script_params_list = open_paren param_list? close_paren;
 
+	param_list = identifier param_list_tail*;
+	param_list_tail = comma identifier;
 
 	use_clauses = use_keyword use_files_list;
 	use_files_list = group_file use_files_tail*;
 	use_files_tail = comma group_file;
 
-	groups_definitions = group_keyword filter_type identifier assign open_bracket identifier_list close_bracket;
+	groups_definitions = group_keyword filter_type identifier assign open_bracket value_list? close_bracket;
 
-	identifier_list = identifier list_tail*;
-	list_tail = comma identifier;
+	filters = {pop_filter} pop_filter | {period_filter} period_filter 
+			| {event_filter} event_filter | {doctor_filter} doctor_filter;
 
-	filters = pop_filter;
-
-	pop_filter = population is pop_fields*;
-	pop_fields = {patientid} id colon number_spec |
-		{gender} gender colon gender_specs |
-		{birthyear} birthyear colon number_spec |
-		{diagnosis} diagnosis colon identifier_list |
-		{postalcode} postalcode colon identifier_list;
-
-	gender_specs = {variable} identifier |
-		{male} male | 
-		{female} female |
-		{both} male female |
-		{both_genders} female male;
+	filter_type = {population_types} population_type | 
+	              {period_types} period_type |
+	              {doctor_types} doctor_type |
+	              {event_types} event_type ;
 
 
-	number_spec = {variable} identifier number_tail? |
-		{before} before number_tail?|
-		{after} after number_tail? |
-		{range} range number_tail? |
-		{integer} integer_literal number_tail?;
+	filter_type_list = filter_type filter_type_list_tail*;
+	filter_type_list_tail = comma filter_type;
 
-	number_tail = comma number_spec;
-	before = before integer_literal;
-	after = after integer_literal;
-	range = integer_literal range_tail;
-	range_tail = to identifier;
-
-
-	pop_type = {patientid} id |
-		{sex} gender |
+	population_type =  {patientid} id | {gender} gender | 
 		{birthyear} birthyear |
-		{diagnosis} diagnosis |
-		{postalcode} postalcode;
+		{diagnosis} diagnosis  |
+		{postalcode} postalcode ;
 
-	period_type = {years} years |
-		{months} months | 
-		{days} days |
-		{hours} hours |
-		{start} start |
-		{end} end;
+	period_type = {year} years |{month} months |{day} days |
+	              {hour} hours |{start} start |{end} end ;
+	doctor_type = doctor;
+	event_type = event;
 
-	filter_type = {population_type} pop_type | {period_type} period_type;
+	pop_filter = population is pop_field+;
+	pop_field = population_type colon value_list;
 
+	period_filter = period is period_field+;
+	period_field = period_type colon value_list;
+
+	doctor_filter = doctor are doctor_field+;
+	doctor_field = id colon value_list;
+
+	event_filter = event_filter_header event_field;
+	event_field = event colon value_list;
+
+	value_list = value value_list_tail*;
+	value_list_tail = comma value;
+
+	value =  {primitive} primitive_value |
+			 {identifier_expansion} identifier_expansion |
+			 {wildcard_val} star | 
+	         {range_val} [start]:primitive_value to [end]:primitive_value ;
+	
+	primitive_value = {string_val} identifier |
+	         {quoted_string_val} quoted_string |
+	         {number_val} integer_literal |
+	         {gender_val} either_gender |
+	         {postalcode_val} t_postalcode;
+
+	identifier_list = {idnt} identifier ident_list_tail* | {idnt_exp} identifier_expansion ident_list_tail*;
+	ident_list_tail = {idnt} comma identifier | {idnt_exp} comma identifier_expansion;
+
+
+	actor = {doc} doctor | {patient} patient | {diagnosis} diagnosis ;
+
+	computation = {foreach_single} t_foreach foreach_clause computation |
+				  {foreach_multi}  t_foreach foreach_clause open_bracket computation+ close_bracket|
+				  {print} t_print print_value |
+				  {table} t_table identifier assign table_value|
+				  {barchart} t_barchart identifier |
+				  {list_def} t_list identifier assign t_sequences t_like sequence_def;
+				  
+
+	foreach_clause = {by_type} actor identifier | 
+	                 {member} t_member [variable]:identifier in [sequence]:identifier|
+	                 {element} t_element [variable]:identifier of [table]:identifier|
+	                 {sequence_in_list} t_sequences identifier t_like sequence_def;
+	                 
+
+	print_value = {value} identifier | {attributes} filter_type_list of identifier|
+	              {timeline} t_timeline of identifier|
+	              {index} [variable]:identifier open_square [index_v]:identifier close_square |
+	              {table_val} table_value|
+	              {length} identifier dot t_length;
+
+	table_value = {count} t_count actor by filter_type|
+	              {native} t_native open_paren param_list? close_paren;
+
+	sequence_def = open_square sequence_stmt? close_square;
+	sequence_stmt = sequence_unit  sequence_stmt_tail*;
+	sequence_stmt_tail = {bar} bar sequence_unit|
+	                     {arrow} arrow sequence_unit;
+
+	sequence_unit = {idnt} identifier | {idnt_exp} identifier_expansion |
+	                {list} open_bracket identifier_list close_bracket |
+	                {negation} open_paren t_not identifier_list close_paren |
+	                {end} end |
+	                {start} start;
