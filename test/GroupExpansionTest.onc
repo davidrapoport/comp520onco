@@ -2,6 +2,7 @@ script GroupExpansionTest(g)
 /**
  * We use this test file to make sure that groups are properly used and expanded 
  * This file also shows off type inferencing. 
+ * 
  */
 
 // ---- Change data in this group file ----

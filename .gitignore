@@ -1,4 +1,6 @@
 *.class
+.DS_Store
+*~
 src/oncotime/analysis/*
 src/oncotime/lexer/*
 src/oncotime/node/*
