@@ -151,105 +151,233 @@ Ignored Tokens
 	space, blank, comment, eol;
 
 Productions
-	program = {script} script_header use_clauses* groups_definitions* filters* open_bracket computation* close_bracket| 
-	          {group_file} multiline_comment groups_definitions*;
+	program {-> grammar} = {script} [header]:header use_clauses* groups_definitions* 
+	                      filter* open_bracket computation* close_bracket 
+	                      {-> New grammar.script(header, [use_clauses.use], [groups_definitions.group], 
+	                       [filter.filter], [computation.computation])} | 
+	          {group_file} multiline_comment groups_definitions* 
+	                   {-> New grammar.group_file(multiline_comment, [groups_definitions.group])};
 
-	script_header = script_keyword identifier script_params_list multiline_comment;
-	script_params_list = open_paren param_list? close_paren;
+	header{-> header} = script_keyword [name]:identifier [prms]:script_params_list [comment]:multiline_comment
+	                    {-> New header(name, [prms.identifier], comment)};
 
-	param_list = identifier param_list_tail*;
-	param_list_tail = comma identifier;
+	script_params_list{-> identifier* } = open_paren param_list? close_paren {-> [param_list.identifier]};
 
-	use_clauses = use_keyword use_files_list;
-	use_files_list = group_file use_files_tail*;
-	use_files_tail = comma group_file;
+	param_list {-> identifier* } = {multiple} [arg]:identifier comma [rest]:param_list {-> [arg, rest.identifier]} |
+	              {single} [arg]:identifier {-> [arg]};
 
-	groups_definitions = group_keyword filter_type identifier assign open_bracket value_list? close_bracket;
+	use_clauses{-> use} = use_keyword [list]:use_files_list {-> New use([list.group_file])};
+	use_files_list{-> group_file*} = {single} group_file {-> [group_file]}|
+	                 {multiple} [first]:group_file comma [rest]:use_files_list {-> [first, rest.group_file]};
 
-	filters = {pop_filter} pop_filter | {period_filter} period_filter 
+	groups_definitions{-> group } = group_keyword filter_type identifier assign open_bracket value_list? close_bracket
+	                                {-> New group(filter_type.filter_type, identifier, [value_list.value])};
+
+	filter{-> filter} = {pop_filter} pop_filter | {period_filter} period_filter 
 			| {event_filter} event_filter | {doctor_filter} doctor_filter;
 
-	filter_type = {population_types} population_type | 
+
+	filter_type{-> filter_type} = {population_types} population_type | 
 	              {period_types} period_type |
 	              {doctor_types} doctor_type |
 	              {event_types} event_type ;
 
 
-	filter_type_list = filter_type filter_type_list_tail*;
-	filter_type_list_tail = comma filter_type;
+	filter_type_list{-> filter_type*} = {multiple} [f]:filter_type comma filter_type_list 
+	                                        {-> [f.filter_type, filter_type_list.filter_type]}
+	                                   | {single} [f]:filter_type 
+	                                        {-> [f.filter_type]};
 
-	population_type =  {patientid} id | {gender} gender | 
-		{birthyear} birthyear |
-		{diagnosis} diagnosis  |
-		{postalcode} postalcode ;
+	population_type {-> population_type}=  {patientid} id {-> New population_type.patientid(id)}| 
+	    {gender} gender {-> New population_type.gender(gender)}| 
+		{birthyear} birthyear {-> New population_type.birthyear(birthyear)}|
+		{diagnosis} diagnosis  {-> New population_type.diagnosis(diagnosis)}|
+		{postalcode} postalcode {-> New population_type.postalcode(postalcode)};
 
-	period_type = {year} years |{month} months |{day} days |
-	              {hour} hours |{start} start |{end} end ;
-	doctor_type = doctor;
-	event_type = event;
+	period_type{-> period_type} = {year} years {-> New period_type.years(years)}|
+	             {month} months {-> New period_type.months(months)}|
+	              {day} days {-> New period_type.days(days)}|
+	              {hour} hours {-> New period_type.hours(hours)}|
+	              {start} start {-> New period_type.start(start)}|
+	              {end} end {-> New period_type.end(end)};
 
-	pop_filter = population is pop_field+;
-	pop_field = population_type colon value_list;
+	doctor_type {-> doctor_type} = doctor {-> New doctor_type.doctor(doctor)};
+	event_type{-> event_type } = event {-> New event_type.event(event)};
 
-	period_filter = period is period_field+;
-	period_field = period_type colon value_list;
+	pop_filter {-> pop_filter} = population is pop_field+ {-> New pop_filter([pop_field.pop_field])};
+	pop_field {-> pop_field} = population_type colon value_list {-> New pop_field(population_type, [value_list.value])};
 
-	doctor_filter = doctor are doctor_field+;
-	doctor_field = id colon value_list;
+	period_filter {-> period_filter} = period is period_field+ {-> New period_filter([period_field.period_field])};
+	period_field {-> period_field} = period_type colon value_list {-> New period_field(period_type, [value_list.value])};
 
-	event_filter = event_filter_header event_field;
-	event_field = event colon value_list;
+	doctor_filter {-> doctor_filter} = doctor are doctor_field+ {-> New doctor_filter([doctor_field.doctor_field])};
+	doctor_field {-> doctor_field} = id colon value_list {-> New doctor_field(id, [value_list.value])};
 
-	value_list = value value_list_tail*;
-	value_list_tail = comma value;
+	event_filter {-> event_filter} = event_filter_header event_field {-> New event_filter([event_field.event_field])};
+	event_field {-> event_field} = event_type colon value_list {-> New event_field(event_type, [value_list.value])};
 
-	value =  {primitive} primitive_value |
-			 {identifier_expansion} identifier_expansion |
-			 {wildcard_val} star | 
-	         {range_val} [start]:primitive_value to [end]:primitive_value ;
+
+	value_list{-> value* } = {single} value {-> [value.value]}|
+	             {multiple} value comma value_list {-> [value.value, value_list.value]};
+
+	value{-> value} =  {primitive} primitive_value {-> primitive_value.value}|
+			 {identifier_expansion} identifier_expansion {-> New value.identifier_expansion(identifier_expansion)}|
+			 {wildcard_val} star {-> New value.wildcard_val(star)}| 
+	         {range_val} [start]:primitive_value to [end]:primitive_value {-> New value.range_val(start.value, end.value)};
 	
-	primitive_value = {string_val} identifier |
-	         {quoted_string_val} quoted_string |
-	         {number_val} integer_literal |
-	         {gender_val} either_gender |
-	         {postalcode_val} t_postalcode;
+	primitive_value{-> value} = {string_val} identifier {-> New value.identifier(identifier)}|
+	         {quoted_string_val} quoted_string {-> New value.quoted_string(quoted_string)}|
+	         {number_val} integer_literal {-> New value.integer(integer_literal)}|
+	         {gender_val} either_gender {-> New value.gender(either_gender)}|
+	         {postalcode_val} t_postalcode{-> New value.postal_code(t_postalcode)};
 
-	identifier_list = {idnt} identifier ident_list_tail* | {idnt_exp} identifier_expansion ident_list_tail*;
-	ident_list_tail = {idnt} comma identifier | {idnt_exp} comma identifier_expansion;
+	identifier_or_expansion{-> identifier_or_expansion} = {identifier} identifier 
+	                                                   {-> New identifier_or_expansion.identifier(identifier)}| 
+	                           {expansion} [exp]:identifier_expansion {-> New identifier_or_expansion.expansion(exp)};
+
+	identifier_list{-> identifier_or_expansion*} = {idnt_sngl} [i]:identifier_or_expansion {-> [i.identifier_or_expansion]}| {idnt_exp_mltp} [s]:identifier_or_expansion comma [rest]:identifier_list 
+	                 {-> [s.identifier_or_expansion, rest.identifier_or_expansion]};
 
 
-	actor = {doc} doctor | {patient} patient | {diagnosis} diagnosis ;
+	actor{-> actor} = {doc} doctor  {-> New actor.doctor(doctor)}| 
+	                  {patient} patient {-> New actor.patient(patient)}| 
+	                  {diagnosis} diagnosis {-> New actor.diagnosis(diagnosis)};
 
-	computation = {foreach_single} t_foreach foreach_clause computation |
-				  {foreach_multi}  t_foreach foreach_clause open_bracket computation+ close_bracket|
-				  {print} t_print print_value |
-				  {table} t_table identifier assign table_value|
-				  {barchart} t_barchart identifier |
-				  {list_def} t_list identifier assign t_sequences t_like sequence_def;
-				  
+	computation{-> computation} = {foreach_single} t_foreach foreach_clause computation 
+	                                  {-> New computation.foreach(foreach_clause.foreach_clause, [computation.computation])}|
+				  {foreach_multi}  t_foreach foreach_clause open_bracket computation+ close_bracket 
+				                     {-> New computation.foreach(foreach_clause.foreach_clause, [computation.computation])}|
+				  {print} t_print print_value 
+				                     {-> New computation.print(print_value.print)}|
+				  {table} t_table identifier assign table 
+				                     {-> New computation.table(identifier, table.table)}|
+				  {barchart} t_barchart identifier 
+				                     {-> New computation.barchart(identifier)}|
+				  {list_def} t_list identifier assign t_sequences t_like sequence_def
+				                     {-> New computation.list_def(identifier, sequence_def.sequence_stmt)};
+			  
 
-	foreach_clause = {by_type} actor identifier | 
-	                 {member} t_member [variable]:identifier in [sequence]:identifier|
-	                 {element} t_element [variable]:identifier of [table]:identifier|
-	                 {sequence_in_list} t_sequences identifier t_like sequence_def;
+	foreach_clause{-> foreach_clause} = {by_type} actor identifier {-> New foreach_clause.by_type(actor.actor, identifier)}| 
+	                 {member} t_member [variable]:identifier in [sequence]:identifier {-> New foreach_clause.member(variable, sequence)}|
+	                 {element} t_element [variable]:identifier of [table]:identifier {-> New foreach_clause.element(variable, table)}|
+	                 {sequence_in_list} t_sequences identifier t_like sequence_def {-> New foreach_clause.sequence_in_list(identifier, sequence_def.sequence_stmt)};
 	                 
 
-	print_value = {value} identifier | {attributes} filter_type_list of identifier|
-	              {timeline} t_timeline of identifier|
-	              {index} [variable]:identifier open_square [index_v]:identifier close_square |
-	              {table_val} table_value|
-	              {length} identifier dot t_length;
+	print_value{-> print} = {value} identifier  {-> New print.value(identifier)}| 
+	              {attributes} [types]:filter_type_list of [i]:identifier {-> New print.attributes([types.filter_type], i)}|
+	              {timeline} t_timeline of identifier {-> New print.timeline(identifier)}|
+	              {index} [variable]:identifier open_square [index_v]:value close_square  {-> New print.index(variable,index_v.value)}|
+	              {table_val} table {-> New print.table(table.table)}|
+	              {length} identifier dot t_length {-> New print.length(identifier)};
 
-	table_value = {count} t_count actor by filter_type|
-	              {native} t_native open_paren param_list? close_paren;
+	table{-> table} = {count} t_count actor by filter_type|
+	              {native} t_native open_paren param_list close_paren;
 
-	sequence_def = open_square sequence_stmt? close_square;
-	sequence_stmt = sequence_unit  sequence_stmt_tail*;
-	sequence_stmt_tail = {bar} bar sequence_unit|
-	                     {arrow} arrow sequence_unit;
+	sequence_def{-> sequence_stmt} = open_square sequence_stmt? close_square {-> sequence_stmt.sequence_stmt};
 
-	sequence_unit = {idnt} identifier | {idnt_exp} identifier_expansion |
-	                {list} open_bracket identifier_list close_bracket |
-	                {negation} open_paren t_not identifier_list close_paren |
-	                {end} end |
-	                {start} start;
+	sequence_stmt{-> sequence_stmt} = {single} sequence_unit 
+	                                       {-> New sequence_stmt.single(sequence_unit.sequence_unit)}| 
+	                                   {bar} sequence_unit bar sequence_stmt 
+	                                       {-> New sequence_stmt.bar(sequence_unit.sequence_unit, sequence_stmt.sequence_stmt)}|
+	                                   {arrow} sequence_unit arrow sequence_stmt
+	                                       {-> New sequence_stmt.arrow(sequence_unit.sequence_unit, sequence_stmt.sequence_stmt)};
+
+	sequence_unit{-> sequence_unit} = {idnt} identifier 
+	                                     {-> New sequence_unit.idnt([identifier])}| 
+	                                  {idnt_exp} identifier_expansion 
+	                                     {-> New sequence_unit.idnt([identifier_expansion])}|
+	                                  {list} open_bracket identifier_list close_bracket 
+	                                     {-> New sequence_unit.idnt(identifier_list)}|
+	                                  {negation} open_paren t_not identifier_list close_paren 
+	                                      {-> New sequence_unit.negation(identifier_list)}|
+	                                  {end} end 
+	                                      {-> New sequence_unit.end(end)}|
+	                                  {start} start
+	                                      {-> New sequence_unit.start(start)};
+
+
+Abstract Syntax Tree
+
+grammar = {script} [header]:header [uses]:use* [groups]:group* [filter]:filter* [computations]:computation* | 
+		  {group_file} [comment]:multiline_comment [groups]:group*;
+
+header = [name]:identifier [params]:identifier* multiline_comment;
+
+use = [files]:group_file+;
+
+group = [type]:filter_type [name]:identifier [values]:value*;
+
+filter = {pop_filter} pop_filter | {period_filter} period_filter 
+		| {event_filter} event_filter | {doctor_filter} doctor_filter;
+
+pop_filter = pop_field*;
+pop_field = population_type value+;
+
+period_filter = period_field*;
+period_field = period_type value+;
+
+doctor_filter = doctor_field*;
+doctor_field = id value+;
+
+event_filter = event_field*;
+event_field = event_type value+;
+
+filter_type = {population_types} population_type | 
+              {period_types} period_type |
+              {doctor_types} doctor_type |
+              {event_types} event_type ;
+
+population_type =  {patientid} id | {gender} gender | 
+	{birthyear} birthyear |
+	{diagnosis} diagnosis  |
+	{postalcode} postalcode ;
+
+period_type = {years} years |{months} months |{days} days |
+              {hours} hours |{start} start |{end} end ;
+doctor_type = {doctor} doctor;
+event_type = {event} event;
+
+
+value =  {identifier_expansion} identifier_expansion |
+		 {wildcard_val} star | 
+         {range_val} [start]:value [end]:value |
+         {identifier} identifier |
+         {integer} integer_literal|
+         {quoted_string} quoted_string|
+         {postal_code} t_postalcode|
+         {gender} either_gender;
+
+identifier_or_expansion = {identifier} identifier | {expansion} identifier_expansion ;
+
+actor = {doctor} doctor | {patient} patient | {diagnosis} diagnosis ;
+
+computation = {foreach}  [clause]:foreach_clause [computations]:computation* |
+			  {print} [value]:print |
+			  {table} [name]:identifier [value]:table|
+			  {barchart} [name]:identifier |
+			  {list_def}  [name]:identifier [value]:sequence_stmt;
+			  
+
+foreach_clause = {by_type} [type]:actor [var]:identifier | 
+                 {member} [variable]:identifier [sequence]:identifier|
+                 {element} [variable]:identifier [table]:identifier|
+                 {sequence_in_list} [name]:identifier [value]:sequence_stmt;
+                 
+
+print       = {value} [name]:identifier | {attributes} [types]:filter_type* [value]:identifier|
+              {timeline} [timeline]:identifier|
+              {index} [variable]:identifier [index_v]:value |
+              {table} [value]:table|
+              {length} [name]:identifier;
+
+table       = {count} [type]:actor [count_type]:filter_type|
+              {native} [params]:identifier* ;
+
+sequence_stmt = {bar} [left]:sequence_unit [right]:sequence_stmt |
+                {arrow} [left]:sequence_unit [right]:sequence_stmt|
+                {single} sequence_unit;
+
+sequence_unit = {idnt} identifier_or_expansion+ |
+                {negation}  identifier_or_expansion+ |
+                {end} end |
+                {start} start;
