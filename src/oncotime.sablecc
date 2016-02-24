@@ -151,36 +151,53 @@ Ignored Tokens
 	space, blank, comment, eol;
 
 Productions
-	program {-> grammar} = {script} [header]:header use_clauses* groups_definitions* 
-	                      filter* open_bracket computation* close_bracket 
-	                      {-> New grammar.script(header, [use_clauses.use], [groups_definitions.group], 
-	                       [filter.filter], [computation.computation])} | 
-	          {group_file} multiline_comment groups_definitions* 
-	                   {-> New grammar.group_file(multiline_comment, [groups_definitions.group])};
+	program {-> grammar} = {script} [header]:header use_clauses* groups_definitions* filter* open_bracket computation* close_bracket 
+	                      		{-> New grammar.script(header, [use_clauses.use], [groups_definitions.group], 
+	                       			[filter.filter], [computation.computation])} | 
+	          		       {group_file} multiline_comment groups_definitions* 
+	                   			{-> New grammar.group_file(multiline_comment, [groups_definitions.group])};
 
 	header{-> header} = script_keyword [name]:identifier [prms]:script_params_list [comment]:multiline_comment
 	                    {-> New header(name, [prms.identifier], comment)};
 
-	script_params_list{-> identifier* } = open_paren param_list? close_paren {-> [param_list.identifier]};
+	script_params_list{-> identifier* } = open_paren param_list? close_paren 
+	                                        {-> [param_list.identifier]};
 
-	param_list {-> identifier* } = {multiple} [arg]:identifier comma [rest]:param_list {-> [arg, rest.identifier]} |
-	              {single} [arg]:identifier {-> [arg]};
+	param_list {-> identifier* } = {multiple} [arg]:identifier comma [rest]:param_list 
+	                                   {-> [arg, rest.identifier]} |
+	                               {single} [arg]:identifier 
+	                                   {-> [arg]};
 
-	use_clauses{-> use} = use_keyword [list]:use_files_list {-> New use([list.group_file])};
-	use_files_list{-> group_file*} = {single} group_file {-> [group_file]}|
-	                 {multiple} [first]:group_file comma [rest]:use_files_list {-> [first, rest.group_file]};
+	use_clauses{-> use} = use_keyword [list]:use_files_list 
+	                          {-> New use([list.group_file])};
+
+	use_files_list{-> group_file*} = {single} group_file 
+	                                    {-> [group_file]}|
+	                                 {multiple} [first]:group_file comma [rest]:use_files_list  
+	                                    {-> [first, rest.group_file]};
 
 	groups_definitions{-> group } = group_keyword filter_type identifier assign open_bracket value_list? close_bracket
-	                                {-> New group(filter_type.filter_type, identifier, [value_list.value])};
+	                                    {-> New group(filter_type.filter_type, identifier, [value_list.value])};
 
-	filter{-> filter} = {pop_filter} pop_filter | {period_filter} period_filter 
-			| {event_filter} event_filter | {doctor_filter} doctor_filter;
+	filter{-> filter} = {pop_filter} pop_filter 
+	                        {-> New filter.pop_filter(pop_filter.pop_filter)}| 
+	                    {period_filter} period_filter 
+	                        {-> New filter.period_filter(period_filter.period_filter)}| 
+	                    {event_filter} event_filter 
+	                        {-> New filter.event_filter(event_filter.event_filter)}| 
+	                    {doctor_filter} doctor_filter
+	                        {-> New filter.doctor_filter(doctor_filter.doctor_filter)};
 
 
-	filter_type{-> filter_type} = {population_types} population_type | 
-	              {period_types} period_type |
-	              {doctor_types} doctor_type |
-	              {event_types} event_type ;
+	filter_type{-> filter_type} = {population_type} [pop]:population_type 
+	                                  {-> New filter_type.population_type(pop.population_type)}| 
+					              {period_type} period_type 
+					                  {-> New filter_type.period_type(period_type.period_type)}|
+					              {doctor_type} doctor_type 
+					                  {-> New filter_type.doctor_type(doctor_type.doctor_type)}|
+					              {event_type} event_type 
+					                  {-> New filter_type.event_type(event_type.event_type)};
+
 
 
 	filter_type_list{-> filter_type*} = {multiple} [f]:filter_type comma filter_type_list 
@@ -188,11 +205,16 @@ Productions
 	                                   | {single} [f]:filter_type 
 	                                        {-> [f.filter_type]};
 
-	population_type {-> population_type}=  {patientid} id {-> New population_type.patientid(id)}| 
-	    {gender} gender {-> New population_type.gender(gender)}| 
-		{birthyear} birthyear {-> New population_type.birthyear(birthyear)}|
-		{diagnosis} diagnosis  {-> New population_type.diagnosis(diagnosis)}|
-		{postalcode} postalcode {-> New population_type.postalcode(postalcode)};
+	population_type {-> population_type}=  {patientid} id 
+	                                             {-> New population_type.patientid(id)}| 
+										    {gender} gender 
+										         {-> New population_type.gender(gender)}| 
+											{birthyear} birthyear 
+											     {-> New population_type.birthyear(birthyear)}|
+											{diagnosis} diagnosis  
+											     {-> New population_type.diagnosis(diagnosis)}|
+											{postalcode} postalcode 
+											     {-> New population_type.postalcode(postalcode)};
 
 	period_type{-> period_type} = {year} years {-> New period_type.years(years)}|
 	             {month} months {-> New period_type.months(months)}|
@@ -322,10 +344,10 @@ doctor_field = id value+;
 event_filter = event_field*;
 event_field = event_type value+;
 
-filter_type = {population_types} population_type | 
-              {period_types} period_type |
-              {doctor_types} doctor_type |
-              {event_types} event_type ;
+filter_type = {population_type} population_type | 
+              {period_type} period_type |
+              {doctor_type} doctor_type |
+              {event_type} event_type ;
 
 population_type =  {patientid} id | {gender} gender | 
 	{birthyear} birthyear |
