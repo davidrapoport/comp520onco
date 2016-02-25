@@ -15,7 +15,9 @@ class Main {
             new PushbackReader(new InputStreamReader(System.in), 1024));
       // Tokenize and Parse
       Parser p = new Parser(l);
-      Start ast = p.parse();
+      PGrammar ast = p.parse().getPGrammar();
+      Weeder weed = new Weeder(ast);
+      weed.addDependencies();
       System.out.println("Valid");
 
       // Pretty Print
@@ -28,20 +30,11 @@ class Main {
       // out = new PrintWriter(filename) ;
       // PrettyPrinter.out = out;
       // (new PrettyPrinter()).print(ast);
-
-      // Lines.setLines(ast);
-
-      // //Build Symbol Table
-      // TypeChecker tc = new TypeChecker(file[i-2], ast);
-      // tc.buildSymbolTable();
-      // HashMap<Node,MiniType> types = tc.typeCheck();
-      // CodeGen cg = new CodeGen(tc.declTypes, tc.exprTypes, ast, file[i-2]);
-      // cg.buildCCode();
     } 
    catch(Exception e) 
     { 
-      System.out.print("Invalid ");
-      System.out.println(e); 
+      System.err.print("Invalid ");
+      System.err.println(e); 
     }
     finally{
       if (out != null)

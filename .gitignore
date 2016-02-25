@@ -1,3 +1,4 @@
+bin/
 *.class
 .DS_Store
 *~
@@ -6,3 +7,4 @@ src/oncotime/lexer/*
 src/oncotime/node/*
 src/oncotime/parser/*
 .project
+.classpath
