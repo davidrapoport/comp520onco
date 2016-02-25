@@ -11,4 +11,7 @@ https://github.com/Sable/Oncotime
 
 Current assumptions:
 No Types allowed for script params 
-length of x doesn't work, use x.length
+length of x doesn't work, use x.length, also x.length only works in a print statement
+we can only assign a table or a list to a variable in the computation block
+Currently events cannot be parametrized
+we do not allow the empty list [] for events

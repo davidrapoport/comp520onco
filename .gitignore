@@ -5,4 +5,4 @@ src/oncotime/analysis/*
 src/oncotime/lexer/*
 src/oncotime/node/*
 src/oncotime/parser/*
-
+.project

@@ -33,6 +33,12 @@ population is
 		print s 
 	}
 
+	// Testing empty sequence
+	foreach sequence s like []
+	{
+		print s 
+	}
+
 	// IDEA: Do we want to allow some function that gives us the time each sequence took?
 	// for example, foreach sequence s like [ct_sim_booked -> ct_sim_completed -> end] print time of s
 }

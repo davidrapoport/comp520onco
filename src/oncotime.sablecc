@@ -151,25 +151,23 @@ Ignored Tokens
 	space, blank, comment, eol;
 
 Productions
-	program {-> grammar} = {script} [header]:header use_clauses* groups_definitions* filter* open_bracket computation* close_bracket 
-	                      		{-> New grammar.script(header, [use_clauses.use], [groups_definitions.group], 
-	                       			[filter.filter], [computation.computation])} | 
+	program {-> grammar} = {script} [header]:header use_clauses* groups_definitions* 
+	                        filters* open_bracket computation* close_bracket 
+	                      		{-> New grammar.script(header.header, [use_clauses.use], [groups_definitions.group], 
+	                       			[filters.filters], [computation.computation])} | 
 	          		       {group_file} multiline_comment groups_definitions* 
 	                   			{-> New grammar.group_file(multiline_comment, [groups_definitions.group])};
 
-	header{-> header} = script_keyword [name]:identifier [prms]:script_params_list [comment]:multiline_comment
+	header{-> header} = script_keyword [name]:identifier open_paren [prms]:param_list? close_paren [comment]:multiline_comment
 	                    {-> New header(name, [prms.identifier], comment)};
 
-	script_params_list{-> identifier* } = open_paren param_list? close_paren 
-	                                        {-> [param_list.identifier]};
-
 	param_list {-> identifier* } = {multiple} [arg]:identifier comma [rest]:param_list 
-	                                   {-> [arg, rest.identifier]} |
+	                                   {-> [arg, rest.identifier] } |
 	                               {single} [arg]:identifier 
 	                                   {-> [arg]};
 
-	use_clauses{-> use} = use_keyword [list]:use_files_list 
-	                          {-> New use([list.group_file])};
+	use_clauses{-> use} = use_keyword use_files_list 
+	                          {-> New use([use_files_list.group_file])};
 
 	use_files_list{-> group_file*} = {single} group_file 
 	                                    {-> [group_file]}|
@@ -179,25 +177,20 @@ Productions
 	groups_definitions{-> group } = group_keyword filter_type identifier assign open_bracket value_list? close_bracket
 	                                    {-> New group(filter_type.filter_type, identifier, [value_list.value])};
 
-	filter{-> filter} = {pop_filter} pop_filter 
-	                        {-> New filter.pop_filter(pop_filter.pop_filter)}| 
-	                    {period_filter} period_filter 
-	                        {-> New filter.period_filter(period_filter.period_filter)}| 
-	                    {event_filter} event_filter 
-	                        {-> New filter.event_filter(event_filter.event_filter)}| 
-	                    {doctor_filter} doctor_filter
-	                        {-> New filter.doctor_filter(doctor_filter.doctor_filter)};
+	filters{-> filters} = {pop_filter} pop_filter 
+	                          {-> New filters.pop_filter(pop_filter)}|
+	                      {period_filter} period_filter 
+	                          {-> New filters.period_filter(period_filter)}|
+	                      {event_filter} event_filter 
+	                          {-> New filters.event_filter(event_filter)}|
+	                      {doctor_filter} doctor_filter 
+	                          {-> New filters.doctor_filter(doctor_filter)};
 
 
-	filter_type{-> filter_type} = {population_type} [pop]:population_type 
-	                                  {-> New filter_type.population_type(pop.population_type)}| 
-					              {period_type} period_type 
-					                  {-> New filter_type.period_type(period_type.period_type)}|
-					              {doctor_type} doctor_type 
-					                  {-> New filter_type.doctor_type(doctor_type.doctor_type)}|
-					              {event_type} event_type 
-					                  {-> New filter_type.event_type(event_type.event_type)};
-
+	filter_type = {population_type} population_type| 
+	              {period_type} period_type |
+	              {doctor_type} doctor_type |
+	              {event_type} event_type ;
 
 
 	filter_type_list{-> filter_type*} = {multiple} [f]:filter_type comma filter_type_list 
@@ -205,38 +198,33 @@ Productions
 	                                   | {single} [f]:filter_type 
 	                                        {-> [f.filter_type]};
 
-	population_type {-> population_type}=  {patientid} id 
-	                                             {-> New population_type.patientid(id)}| 
-										    {gender} gender 
-										         {-> New population_type.gender(gender)}| 
-											{birthyear} birthyear 
-											     {-> New population_type.birthyear(birthyear)}|
-											{diagnosis} diagnosis  
-											     {-> New population_type.diagnosis(diagnosis)}|
-											{postalcode} postalcode 
-											     {-> New population_type.postalcode(postalcode)};
+	population_type  =  {patientid} id |
+					    {gender} gender |
+						{birthyear} birthyear |
+						{diagnosis} diagnosis | 
+						{postalcode} postalcode ; 
 
-	period_type{-> period_type} = {year} years {-> New period_type.years(years)}|
-	             {month} months {-> New period_type.months(months)}|
-	              {day} days {-> New period_type.days(days)}|
-	              {hour} hours {-> New period_type.hours(hours)}|
-	              {start} start {-> New period_type.start(start)}|
-	              {end} end {-> New period_type.end(end)};
+	period_type = {years} years |
+	             {months} months |
+	              {days} days |
+	              {hours} hours |
+	              {start} start |
+	              {end} end ;
 
-	doctor_type {-> doctor_type} = doctor {-> New doctor_type.doctor(doctor)};
-	event_type{-> event_type } = event {-> New event_type.event(event)};
+	doctor_type = {doctor} doctor;
+	event_type = {event} event ;
 
-	pop_filter {-> pop_filter} = population is pop_field+ {-> New pop_filter([pop_field.pop_field])};
-	pop_field {-> pop_field} = population_type colon value_list {-> New pop_field(population_type, [value_list.value])};
+	pop_filter{-> pop_filter } = population is pop_field+ {-> New pop_filter([pop_field.pop_field])};
+	pop_field{-> pop_field } = population_type colon value_list {-> New pop_field(population_type, [value_list.value])};
 
-	period_filter {-> period_filter} = period is period_field+ {-> New period_filter([period_field.period_field])};
-	period_field {-> period_field} = period_type colon value_list {-> New period_field(period_type, [value_list.value])};
+	period_filter{-> period_filter } = period is period_field+ {-> New period_filter([period_field.period_field])};
+	period_field{-> period_field } = period_type colon value_list {-> New period_field(period_type, [value_list.value])};
 
-	doctor_filter {-> doctor_filter} = doctor are doctor_field+ {-> New doctor_filter([doctor_field.doctor_field])};
-	doctor_field {-> doctor_field} = id colon value_list {-> New doctor_field(id, [value_list.value])};
+	doctor_filter{-> doctor_filter } = doctor are doctor_field+ {-> New doctor_filter([doctor_field.doctor_field])};
+	doctor_field{-> doctor_field } = id colon value_list {-> New doctor_field(id, [value_list.value])};
 
-	event_filter {-> event_filter} = event_filter_header event_field {-> New event_filter([event_field.event_field])};
-	event_field {-> event_field} = event_type colon value_list {-> New event_field(event_type, [value_list.value])};
+	event_filter{-> event_filter } = event_filter_header event_field {-> New event_filter([event_field.event_field])};
+	event_field{-> event_field }  = event_type colon value_list {-> New event_field(event_type, [value_list.value])};
 
 
 	value_list{-> value* } = {single} value {-> [value.value]}|
@@ -253,17 +241,16 @@ Productions
 	         {gender_val} either_gender {-> New value.gender(either_gender)}|
 	         {postalcode_val} t_postalcode{-> New value.postal_code(t_postalcode)};
 
-	identifier_or_expansion{-> identifier_or_expansion} = {identifier} identifier 
-	                                                   {-> New identifier_or_expansion.identifier(identifier)}| 
-	                           {expansion} [exp]:identifier_expansion {-> New identifier_or_expansion.expansion(exp)};
+	identifier_or_expansion = {identifier} identifier | 
+	                          {expansion} identifier_expansion ;
 
 	identifier_list{-> identifier_or_expansion*} = {idnt_sngl} [i]:identifier_or_expansion {-> [i.identifier_or_expansion]}| {idnt_exp_mltp} [s]:identifier_or_expansion comma [rest]:identifier_list 
 	                 {-> [s.identifier_or_expansion, rest.identifier_or_expansion]};
 
 
-	actor{-> actor} = {doc} doctor  {-> New actor.doctor(doctor)}| 
-	                  {patient} patient {-> New actor.patient(patient)}| 
-	                  {diagnosis} diagnosis {-> New actor.diagnosis(diagnosis)};
+	actor   = {doctor} doctor | 
+	          {patient} patient | 
+	          {diagnosis} diagnosis ;
 
 	computation{-> computation} = {foreach_single} t_foreach foreach_clause computation 
 	                                  {-> New computation.foreach(foreach_clause.foreach_clause, [computation.computation])}|
@@ -292,10 +279,14 @@ Productions
 	              {table_val} table {-> New print.table(table.table)}|
 	              {length} identifier dot t_length {-> New print.length(identifier)};
 
-	table{-> table} = {count} t_count actor by filter_type|
-	              {native} t_native open_paren param_list close_paren;
+	table{-> table} = {count} t_count actor by filter_type
+	                       {-> New table.count(actor.actor, filter_type.filter_type)}|
+	                  {native} t_native open_paren param_list close_paren
+	                       {-> New table.native([param_list.identifier])};
 
-	sequence_def{-> sequence_stmt} = open_square sequence_stmt? close_square {-> sequence_stmt.sequence_stmt};
+	sequence_def{-> sequence_stmt} = {sequence} open_square sequence_stmt close_square 
+	                                     {-> sequence_stmt.sequence_stmt}|
+	                                  {empty} open_square close_square {-> New sequence_stmt.empty()  };
 
 	sequence_stmt{-> sequence_stmt} = {single} sequence_unit 
 	                                       {-> New sequence_stmt.single(sequence_unit.sequence_unit)}| 
@@ -304,14 +295,12 @@ Productions
 	                                   {arrow} sequence_unit arrow sequence_stmt
 	                                       {-> New sequence_stmt.arrow(sequence_unit.sequence_unit, sequence_stmt.sequence_stmt)};
 
-	sequence_unit{-> sequence_unit} = {idnt} identifier 
-	                                     {-> New sequence_unit.idnt([identifier])}| 
-	                                  {idnt_exp} identifier_expansion 
-	                                     {-> New sequence_unit.idnt([identifier_expansion])}|
+	sequence_unit{-> sequence_unit} = {idnt} identifier_or_expansion 
+	                                     {-> New sequence_unit.idnt([identifier_or_expansion])}| 
 	                                  {list} open_bracket identifier_list close_bracket 
-	                                     {-> New sequence_unit.idnt(identifier_list)}|
+	                                     {-> New sequence_unit.idnt([identifier_list.identifier_or_expansion])}|
 	                                  {negation} open_paren t_not identifier_list close_paren 
-	                                      {-> New sequence_unit.negation(identifier_list)}|
+	                                      {-> New sequence_unit.negation([identifier_list.identifier_or_expansion])}|
 	                                  {end} end 
 	                                      {-> New sequence_unit.end(end)}|
 	                                  {start} start
@@ -320,29 +309,29 @@ Productions
 
 Abstract Syntax Tree
 
-grammar = {script} [header]:header [uses]:use* [groups]:group* [filter]:filter* [computations]:computation* | 
+grammar = {script} [header]:header [uses]:use* [groups]:group* [filter]:filters* [computations]:computation* | 
 		  {group_file} [comment]:multiline_comment [groups]:group*;
 
 header = [name]:identifier [params]:identifier* multiline_comment;
 
-use = [files]:group_file+;
+use = [files]:group_file*;
 
 group = [type]:filter_type [name]:identifier [values]:value*;
 
-filter = {pop_filter} pop_filter | {period_filter} period_filter 
+filters = {pop_filter} pop_filter | {period_filter} period_filter 
 		| {event_filter} event_filter | {doctor_filter} doctor_filter;
 
-pop_filter = pop_field*;
-pop_field = population_type value+;
+pop_filter = pop_field+;
+pop_field = population_type value*;
 
-period_filter = period_field*;
-period_field = period_type value+;
+period_filter = period_field+;
+period_field = period_type value*;
 
-doctor_filter = doctor_field*;
-doctor_field = id value+;
+doctor_filter = doctor_field+;
+doctor_field = id value*;
 
-event_filter = event_field*;
-event_field = event_type value+;
+event_filter = event_field+;
+event_field = event_type value*;
 
 filter_type = {population_type} population_type | 
               {period_type} period_type |
@@ -397,7 +386,8 @@ table       = {count} [type]:actor [count_type]:filter_type|
 
 sequence_stmt = {bar} [left]:sequence_unit [right]:sequence_stmt |
                 {arrow} [left]:sequence_unit [right]:sequence_stmt|
-                {single} sequence_unit;
+                {single} sequence_unit|
+                {empty};
 
 sequence_unit = {idnt} identifier_or_expansion+ |
                 {negation}  identifier_or_expansion+ |
